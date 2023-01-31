@@ -8,10 +8,11 @@ from sqlalchemy import (
     String,
 )
 from sqlalchemy.orm import declarative_base
+import os
 
 Base = declarative_base()
 engine = create_engine(
-    "sqlite:///post_suggest.db",
+    f"sqlite://{os.getenv('DB_URL')}",
     echo=False,
 )
 
