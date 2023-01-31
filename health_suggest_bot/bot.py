@@ -86,22 +86,23 @@ async def send_img(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def send_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    file = update.message.photo[-1]
-    photo = await file.get_file()
+    file = update.message.video
+    print(file)
+    video = await file.get_file()
     question = Question(
-        update.effective_user.id, photo.file_path, update.message.caption
+        update.effective_user.id, video.file_path, update.message.caption
     )
     logging.info(f"New {question}")
-    await context.bot.send_photo(
+    await context.bot.send_video(
         chat_id=os.getenv("REPLY_USER_ID"),
-        photo=file,
+        video=file,
         caption=(question.text if question.text else "")
         + f"\n\n User id: {question.owner_id}",
         reply_markup=InlineKeyboardMarkup(get_buttons(question)),
     )
     await update.message.reply_text(
         "Спасибо за Ваш вопрос! \
-                Вы получите уведомление, если ваш вопрос будет рассмотрен."
+                Вы получите уведомление, если Ваш вопрос будет рассмотрен."
     )
 
 

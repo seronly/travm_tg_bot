@@ -27,14 +27,16 @@ def main():
 
     # Start menu
     application.add_handler(CommandHandler("start", bot.start))
+    # Send question
     application.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, bot.send_img)
     )
     application.add_handler(MessageHandler(filters.PHOTO, bot.send_img))
     application.add_handler(MessageHandler(filters.VIDEO, bot.send_video))
 
+    # Admin
     application.add_handler(CommandHandler("admin", bot.admin))
-
+    application.add_handler(CommandHandler("send_ad", bot.send_ad))
     application.add_handler(CallbackQueryHandler(bot.callback_handler))
 
     application.run_polling()
