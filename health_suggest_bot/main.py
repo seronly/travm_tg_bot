@@ -11,6 +11,8 @@ import dotenv
 import logging
 import bot
 
+dotenv.load_dotenv()
+
 # Enable logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - \
@@ -21,8 +23,6 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    dotenv.load_dotenv()
-
     application = Application.builder().token(os.getenv("API_TOKEN")).build()
 
     # User command

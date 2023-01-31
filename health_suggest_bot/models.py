@@ -8,11 +8,10 @@ from sqlalchemy import (
     String,
 )
 from sqlalchemy.orm import declarative_base
-import os
 
 Base = declarative_base()
 engine = create_engine(
-    f"sqlite://{os.getenv('DB_URL')}",
+    "sqlite:///travm_bot.db",
     echo=False,
 )
 
