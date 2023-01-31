@@ -62,6 +62,7 @@ class Question(Base):
 
     def __repr__(self):
         return (
-            f"<Question(question_id={self.post_id}, owner_id={self.owner_id}, "
+            f"<Question(question_id={self.question_id}, "
+            f"owner_id={self.owner_id}, "
             f"attachment_filename={self.attachment_path}, text={self.text}>"
         )

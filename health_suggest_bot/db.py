@@ -8,9 +8,8 @@ import logging
 Base.metadata.create_all(engine)
 Session = scoped_session(sessionmaker(engine))
 
+
 # User
-
-
 def create_user(update) -> None:
     """Сохраняет пользователя в базу данных, если его еще нет
 
@@ -20,7 +19,7 @@ def create_user(update) -> None:
     session = Session()
     user = update.effective_user
     if not get_user(user.id):
-        is_admin = str(user.id) in os.getenv("ADMIN_IDS").split(",")
+        is_admin = str(user.id) in os.getenv("ADMIN_IDS").split(", ")
         user_db = User(
             tg_id=user.id,
             fullname=user.full_name,

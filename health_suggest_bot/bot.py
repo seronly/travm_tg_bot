@@ -6,11 +6,8 @@ from telegram import (
 )
 from telegram.ext import (
     ContextTypes,
-    ConversationHandler,
-    MessageHandler,
-    CommandHandler,
-    filters,
 )
+from telegram.constants import ParseMode
 
 import constants
 from db import (
@@ -19,6 +16,7 @@ from db import (
     is_admin,
     get_question,
     delete_question,
+    save_question,
 )
 import json
 import logging
@@ -52,17 +50,17 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def send_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if str(update.effective_user.id) in os.getenv("ADMIN_IDS").split(","):
+        return
     question = Question(update.effective_user.id, None, update.message.text)
+    save_question(question)
     logging.info(f"New {question}")
     await context.bot.send_message(
         os.getenv("REPLY_USER_ID"),
-        text=question.text + f"\n\n User id: {question.owner_id}",
+        text=question.text + f"\n\nUser id: {question.owner_id}",
         reply_markup=InlineKeyboardMarkup(get_buttons(question)),
     )
-    await update.message.reply_text(
-        "Спасибо за предложение! \
-            Вы получите уведомление, если ваш пост будет опубликован."
-    )
+    await update.message.reply_text(constants.THANKS_FOR_QUESTION)
 
 
 async def send_img(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -71,6 +69,8 @@ async def send_img(update: Update, context: ContextTypes.DEFAULT_TYPE):
     question = Question(
         update.effective_user.id, photo.file_path, update.message.caption
     )
+    save_question(question)
+
     logging.info(f"New {question}")
     await context.bot.send_photo(
         chat_id=os.getenv("REPLY_USER_ID"),
@@ -79,10 +79,7 @@ async def send_img(update: Update, context: ContextTypes.DEFAULT_TYPE):
         + f"\n\n User id: {question.owner_id}",
         reply_markup=InlineKeyboardMarkup(get_buttons(question)),
     )
-    await update.message.reply_text(
-        "Спасибо за предложение! \
-                Вы получите уведомление, если ваш пост будет опубликован."
-    )
+    await update.message.reply_text(constants.THANKS_FOR_QUESTION)
 
 
 async def send_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -92,6 +89,7 @@ async def send_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     question = Question(
         update.effective_user.id, video.file_path, update.message.caption
     )
+    save_question(question)
     logging.info(f"New {question}")
     await context.bot.send_video(
         chat_id=os.getenv("REPLY_USER_ID"),
@@ -100,10 +98,7 @@ async def send_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
         + f"\n\n User id: {question.owner_id}",
         reply_markup=InlineKeyboardMarkup(get_buttons(question)),
     )
-    await update.message.reply_text(
-        "Спасибо за Ваш вопрос! \
-                Вы получите уведомление, если Ваш вопрос будет рассмотрен."
-    )
+    await update.message.reply_text(constants.THANKS_FOR_QUESTION)
 
 
 def get_buttons(question: Question):
@@ -128,31 +123,27 @@ def get_buttons(question: Question):
 @admin_command
 async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Вы админ!", reply_markup=ReplyKeyboardRemove()
+        text="Чтобы отправить рассылку, введите"
+        "/send_ad <i>текст сообщения</i>\n"
+        "Вы так же можете вставить placeholders:\n"
+        "{name} - полное имя человека в тг\n"
+        "{username} - логин человека в тг\n",
+        parse_mode="HTML",
+        reply_markup=ReplyKeyboardRemove(),
     )
 
 
 @admin_command
 async def send_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Отправьте текст для рассылки")
-    return constants.GET_AD
-
-
-async def get_text_for_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
     users = get_user_list(False)
+    text = " ".join(update.message.text.split(" ")[1:])
     for user in users:
         await context.bot.send_message(
-            user.tg_id, text=update.message.text, parse_mode="HTML"
+            user.tg_id,
+            text=text.format(name=user.fullname, username=user.username),
+            parse_mode=ParseMode.HTML,
         )
     await update.message.reply_text("Рассылка была отправлена!")
-    return ConversationHandler.END
-
-
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id, text="Диалог отменен."
-    )
-    return ConversationHandler.END
 
 
 # Callbacks
@@ -176,24 +167,10 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             delete_question(question)
         else:
             logging.error(f"question with id {data['question']} not found")
-            await query.answer(f"Пост с id {data['question']} не найден")
+            await query.answer(f"Вопрос с id {data['question']} не найден")
 
     else:
         logging.error(
             f"Unauthorized access detected!\nId: {update.effective_user.id}"
         )
         await query.answer("Отказано в доступе!")
-
-
-# Conversation Handlers
-ad_conv_handler = ConversationHandler(
-    entry_points=[CommandHandler("send_ad", send_ad)],
-    states={
-        constants.GET_AD: [
-            MessageHandler(
-                filters.TEXT,
-            )
-        ]
-    },
-    fallbacks=[CommandHandler("cancel", cancel)],
-)
