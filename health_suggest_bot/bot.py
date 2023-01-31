@@ -50,8 +50,8 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def send_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.effective_user.id) in os.getenv("ADMIN_IDS").split(","):
-        return
+    # if str(update.effective_user.id) in os.getenv("ADMIN_IDS").split(","):
+    #     return
     question = Question(update.effective_user.id, None, update.message.text)
     save_question(question)
     logging.info(f"New {question}")
@@ -123,7 +123,7 @@ def get_buttons(question: Question):
 @admin_command
 async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        text="Чтобы отправить рассылку, введите"
+        text="Чтобы отправить рассылку, введите "
         "/send_ad <i>текст сообщения</i>\n"
         "Вы так же можете вставить placeholders:\n"
         "{name} - полное имя человека в тг\n"
