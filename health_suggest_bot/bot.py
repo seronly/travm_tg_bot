@@ -84,7 +84,6 @@ async def send_img(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def send_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     file = update.message.video
-    print(file)
     video = await file.get_file()
     question = Question(
         update.effective_user.id, video.file_path, update.message.caption
