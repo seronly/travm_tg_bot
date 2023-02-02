@@ -5,6 +5,7 @@ SUCCESS_QUESTION_TEXT = "✅ Вопрос принят"
 DECLINE_QUESTION_TEXT = "❌ Вопрос отклонен"
 THANKS_FOR_QUESTION = "Спасибо за Ваш вопрос!\n\
 Вы получите уведомление, если Ваш вопрос будет рассмотрен."
+USER_ACCEPTED_QUESTION = "Ваш пост был опубликован!"
 
 # Buttons
 GET_QUESTIONS_TEXT = "Посмотреть вопросы"

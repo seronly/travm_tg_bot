@@ -38,6 +38,8 @@ def main():
     # Admin
     application.add_handler(CommandHandler("admin", bot.admin))
     application.add_handler(CommandHandler("send_ad", bot.send_ad))
+    application.add_handler(CommandHandler("stats", bot.get_stats))
+
     application.add_handler(CallbackQueryHandler(bot.callback_handler))
 
     # Conv handler
