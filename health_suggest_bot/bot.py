@@ -140,11 +140,11 @@ def get_buttons(question: Question):
 @admin_command
 async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        text="Чтобы отправить рассылку, введите "
-        "/send_ad <i>текст сообщения</i>\n"
+        text="/send_ad <i>текст сообщения</i> - отправить рассылку\n"
         "Вы так же можете вставить placeholders:\n"
         "{name} - полное имя человека в тг\n"
-        "{username} - логин человека в тг\n",
+        "{username} - логин человека в тг\n\n"
+        "/stats - получить статистику бота\n",
         parse_mode="HTML",
         reply_markup=ReplyKeyboardRemove(),
     )
