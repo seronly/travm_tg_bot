@@ -4,8 +4,8 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
-    Integer,
     String,
+    BigInteger,
 )
 from sqlalchemy.orm import declarative_base
 import os
@@ -28,7 +28,7 @@ engine = create_engine(
 class User(Base):
     __tablename__ = "users"
 
-    tg_id = Column(Integer, unique=True, primary_key=True)
+    tg_id = Column(BigInteger, unique=True, primary_key=True)
     fullname = Column(String(50))
     username = Column(String(30))
     first_start = Column(DateTime(True))
@@ -63,8 +63,8 @@ class User(Base):
 
 class Question(Base):
     __tablename__ = "questions"
-    question_id = Column(Integer, unique=True, primary_key=True)
-    owner_id = Column(Integer, ForeignKey("users.tg_id"))
+    question_id = Column(BigInteger, unique=True, primary_key=True)
+    owner_id = Column(BigInteger, ForeignKey("users.tg_id"))
     attachment_path = Column(String(255))
     text = Column(String(255))
 
