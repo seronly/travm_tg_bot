@@ -10,16 +10,18 @@ Session = scoped_session(sessionmaker(engine))
 
 
 # User
-def create_user(update) -> None:
-    """Сохраняет пользователя в базу данных, если его еще нет
+def create_or_update_user(update) -> None:
+    """Create or update user
 
     Args:
-        update (Update): Ответ бота
+        update (Update): Bot answer update
     """
     session = Session()
-    user = update.effective_user
-    if not get_user(user.id):
-        is_admin = str(user.id) in os.getenv("ADMIN_IDS").split(", ")
+
+    user = get_user(update.effective_user.id)
+    is_admin = str(user.id) in os.getenv("ADMIN_IDS").split(", ")
+
+    if not user:
         user_db = User(
             tg_id=user.id,
             fullname=user.full_name,
@@ -28,37 +30,52 @@ def create_user(update) -> None:
             is_admin=is_admin,
             is_blocked=False,
         )
-        logging.info(f"Added user {User}")
+        logging.info(f"Added user {user_db}")
         session.add(user_db)
     else:
-        session.query(User).filter_by(tg_id=user.id).update(
-            {"is_blocked": False}
+        update_user(
+            user.id,
+            {
+                "fullname": user.full_name,
+                "username": user.username,
+                "is_admin": is_admin,
+                "is_blocked": False,
+            },
         )
     session.commit()
 
 
 def get_user(user_id: int) -> User | None:
-    """Получение пользователя с бд
+    """Get user from db
 
     Args:
-        user_id (int): ID пользователя
+        user_id (int)
 
     Returns:
-        User | None: Возвращает пользователя,
-        если он есть в бд или None, если нет
+        User | None: Return User or None if the result doesn't contain any row.
     """
     session = Session()
-    result = session.query(User).filter_by(tg_id=user_id).first()
-    return result
+    return session.query(User).filter_by(tg_id=user_id).first()
+
+
+def update_user(user_id: int, values: dict) -> None:
+    """Update `values` of user with `user_id`
+
+    Args:
+        user_id (int)
+        values (dict)
+    """
+    session = Session()
+    session.query(User).filter_by(tg_id=user_id).update(values)
+    session.commit()
 
 
 def get_user_list(inlcude_admin: bool = True) -> list[User]:
     session = Session()
     if inlcude_admin:
-        result = session.query(User).all()
+        return session.query(User).all()
     else:
-        result = session.query(User).filter_by(is_admin=False).all()
-    return result
+        return session.query(User).filter_by(is_admin=False).all()
 
 
 def get_user_list_wtih_block_status(
@@ -134,3 +151,4 @@ def get_question_count() -> int:
 def delete_question(question: Question):
     session = Session()
     session.delete(question)
+    session.commit()

@@ -12,15 +12,15 @@ from telegram.error import Forbidden
 
 import constants
 from db import (
-    create_user,
+    create_or_update_user,
     get_user_list,
     is_admin,
-    get_question,
-    delete_question,
-    save_question,
     set_user_block_status,
     get_all_user_count,
     get_blocked_user_count,
+    get_question,
+    delete_question,
+    save_question,
     get_question_count,
 )
 import json
@@ -44,10 +44,13 @@ def admin_command(func):
 def user_command(func):
     async def wrapper(*args, **kwargs):
         update, context = args
+        # user = get_user(update.effective_user.id)
+        # uncommend if db broke again
+        # if not user or not user.fullname:
+        #     user = create_or_update_user(update)
+
         if not is_admin(update.effective_user.id):
             return await func(*args, **kwargs)
-        else:
-            return
 
     return wrapper
 
@@ -56,7 +59,7 @@ def user_command(func):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.chat_data["current_question_index"] = 0
     text = constants.START_TEXT
-    create_user(update)
+    create_or_update_user(update)
     await update.message.reply_text(text)
 
 
@@ -74,7 +77,7 @@ async def send_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(
         os.getenv("REPLY_USER_ID"),
         text=question.text + f"\n\nUser id: {question.owner_id}",
-        reply_markup=InlineKeyboardMarkup(get_buttons(question)),
+        reply_markup=InlineKeyboardMarkup(get_question_accept_btns(question)),
     )
     await update.message.reply_text(constants.THANKS_FOR_QUESTION)
 
@@ -94,7 +97,7 @@ async def send_img(update: Update, context: ContextTypes.DEFAULT_TYPE):
         photo=file,
         caption=(question.text if question.text else "")
         + f"\n\n User id: {question.owner_id}",
-        reply_markup=InlineKeyboardMarkup(get_buttons(question)),
+        reply_markup=InlineKeyboardMarkup(get_question_accept_btns(question)),
     )
     await update.message.reply_text(constants.THANKS_FOR_QUESTION)
 
@@ -113,12 +116,12 @@ async def send_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
         video=file,
         caption=(question.text if question.text else "")
         + f"\n\n User id: {question.owner_id}",
-        reply_markup=InlineKeyboardMarkup(get_buttons(question)),
+        reply_markup=InlineKeyboardMarkup(get_question_accept_btns(question)),
     )
     await update.message.reply_text(constants.THANKS_FOR_QUESTION)
 
 
-def get_buttons(question: Question):
+def get_question_accept_btns(question: Question):
     return [
         [
             InlineKeyboardButton(
@@ -152,21 +155,32 @@ async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @admin_command
 async def send_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    users = get_user_list(False)
+    users = get_user_list(inlcude_admin=False)
     text = " ".join(update.message.text.split(" ")[1:])
+    sended_users_number = 0
+    block_bot_users_number = 0
     for user in users:
         try:
             if not user.is_blocked:
                 await context.bot.send_message(
                     user.tg_id,
                     text=text.format(
-                        name=user.fullname, username=user.username
+                        name=user.fullname or "Уважаемый пользователь",
+                        username=user.username or "",
                     ),
                     parse_mode=ParseMode.HTML,
                 )
+                sended_users_number += 1
+            else:
+                block_bot_users_number += 1
         except Forbidden:
             set_user_block_status(user.tg_id, True)
-    await update.message.reply_text("Рассылка была отправлена!")
+            block_bot_users_number += 1
+
+    await update.message.reply_text(
+        f"Рассылка была отправлена {sended_users_number} пользователям!\n"
+        f"Пользователей, заблокировавших  бота: {block_bot_users_number}."
+    )
 
 
 @admin_command
