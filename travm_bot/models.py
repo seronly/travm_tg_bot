@@ -8,10 +8,19 @@ from sqlalchemy import (
     String,
 )
 from sqlalchemy.orm import declarative_base
+import os
+import dotenv
+
+dotenv.load_dotenv()
 
 Base = declarative_base()
+
+db_name = os.getenv("DB_NAME")
+db_user = os.getenv("DB_USER")
+db_pass = os.getenv("DB_PASS")
+
 engine = create_engine(
-    "sqlite:///travm_bot.db",
+    f"mysql+pymysql://{db_user}:" f"{db_pass}@" f"localhost/{db_name}",
     echo=False,
 )
 
@@ -56,8 +65,8 @@ class Question(Base):
     __tablename__ = "questions"
     question_id = Column(Integer, unique=True, primary_key=True)
     owner_id = Column(Integer, ForeignKey("users.tg_id"))
-    attachment_path = Column(String)
-    text = Column(String)
+    attachment_path = Column(String(255))
+    text = Column(String(255))
 
     def __init__(self, owner_id, attachment_path, text):
         self.owner_id = owner_id
