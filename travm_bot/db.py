@@ -113,12 +113,11 @@ def is_admin(user_id: int) -> bool:
 
 
 # Question
-def save_question(question: Question) -> Question:
+def save_question(question: Question) -> None:
     session = Session()
-    question = session.add(question)
+    session.add(question)
     logger.info(f"New {question}")
     session.commit()
-    return question
 
 
 def get_question(question_id) -> Question:

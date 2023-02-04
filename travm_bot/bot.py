@@ -53,7 +53,6 @@ def user_command(func):
 
 # Commands
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(update)
     context.chat_data["current_question_index"] = 0
     text = constants.START_TEXT
     db.create_or_update_user(update)
