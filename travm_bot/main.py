@@ -8,18 +8,12 @@ from telegram.ext import (
 
 import os
 import dotenv
-import logging
+import custom_logging as cl
 import bot
 
 dotenv.load_dotenv()
 
-# Enable logging
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - \
-%(levelname)s - %(message)s",
-    level=logging.INFO,
-)
-logger = logging.getLogger(__name__)
+logger = cl.logger
 
 
 def main():
@@ -42,8 +36,8 @@ def main():
 
     application.add_handler(CallbackQueryHandler(bot.callback_handler))
 
-    # Conv handler
-
+    # Err handler
+    application.add_error_handler(bot.error_handler)
     application.run_polling()
 
 

@@ -2,8 +2,9 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from models import Base, engine, User, Question
 import datetime
 import os
-import logging
+import custom_logging as cl
 
+logger = cl.logger
 
 Base.metadata.create_all(engine)
 Session = scoped_session(sessionmaker(engine))
@@ -32,7 +33,7 @@ def create_or_update_user(update) -> None:
             is_admin=is_admin,
             is_blocked=False,
         )
-        logging.info(f"Added user {user_db}")
+        logger.info(f"Added user {user_db}")
         session.add(user_db)
     else:
         update_user(
@@ -115,7 +116,7 @@ def is_admin(user_id: int) -> bool:
 def save_question(question: Question) -> Question:
     session = Session()
     question = session.add(question)
-    logging.info(f"New {question}")
+    logger.info(f"New {question}")
     session.commit()
     return question
 
