@@ -38,6 +38,9 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def send_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = db.get_user(update.effective_user.id)
+    if not user:
+        db.create_or_update_user(update)
     question = Question(update.effective_user.id, None, update.message.text)
     if len(question.text) > 250:
         await update.message.reply_text(constants.LONG_TEXT)
@@ -53,12 +56,18 @@ async def send_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def send_img(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = db.get_user(update.effective_user.id)
+    if not user:
+        db.create_or_update_user(update)
     file = update.message.photo[-1]
     photo = await file.get_file()
     question = Question(
         update.effective_user.id, photo.file_path, update.message.caption
     )
-    if len(question.text) > 250:
+    text = (
+        question.text if question.text else ""
+    ) + f"\n\n User id: {question.owner_id}"
+    if len(text) > 250:
         await update.message.reply_text(constants.LONG_TEXT)
         return
     db.save_question(question)
@@ -66,28 +75,32 @@ async def send_img(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_photo(
         chat_id=os.getenv("REPLY_USER_ID"),
         photo=file,
-        caption=(question.text if question.text else "")
-        + f"\n\n User id: {question.owner_id}",
+        caption=text,
         reply_markup=InlineKeyboardMarkup(get_question_accept_btns(question)),
     )
     await update.message.reply_text(constants.THANKS_FOR_QUESTION)
 
 
 async def send_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = db.get_user(update.effective_user.id)
+    if not user:
+        db.create_or_update_user(update)
     file = update.message.video
     video = await file.get_file()
     question = Question(
         update.effective_user.id, video.file_path, update.message.caption
     )
-    if len(question.text) > 250:
+    text = (
+        question.text if question.text else ""
+    ) + f"\n\n User id: {question.owner_id}"
+    if len(text) > 250:
         await update.message.reply_text(constants.LONG_TEXT)
         return
     db.save_question(question)
     await context.bot.send_video(
         chat_id=os.getenv("REPLY_USER_ID"),
         video=file,
-        caption=(question.text if question.text else "")
-        + f"\n\n User id: {question.owner_id}",
+        caption=text,
         reply_markup=InlineKeyboardMarkup(get_question_accept_btns(question)),
     )
     await update.message.reply_text(constants.THANKS_FOR_QUESTION)
