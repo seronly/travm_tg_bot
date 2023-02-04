@@ -48,6 +48,9 @@ def main():
                     bot.send_ad_attachment,
                 )
             ],
+            constants.SEND_AD_BUTTON: [
+                MessageHandler(filters.TEXT, bot.send_ad_button)
+            ],
         },
         fallbacks=[CommandHandler("cancel", bot.cancel)],
     )

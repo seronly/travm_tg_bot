@@ -17,4 +17,4 @@ SEND_AD_BTN = "Отправить рассылку"
 CHECK_STATS_BTN = "Посмотреть статистику"
 ADMIN_MENU_BTNS = [[SEND_AD_BTN, CHECK_STATS_BTN]]
 # ConversationHandler
-SEND_AD_TEXT, SEND_AD_ATTACHMENT = range(2)
+SEND_AD_TEXT, SEND_AD_ATTACHMENT, SEND_AD_BUTTON = range(3)

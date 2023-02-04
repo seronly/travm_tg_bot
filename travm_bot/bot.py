@@ -123,62 +123,6 @@ async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def send_ad(
-    update: Update, context: ContextTypes.DEFAULT_TYPE, post: dict
-):
-    users = db.get_all_users(inlcude_admin=False)
-    sended_users_number = 0
-    block_bot_users_number = 0
-    text = post["text"]
-    file = post["attachment"]
-    for user in users:
-        try:
-            if not user.is_blocked:
-                if post["type"] == "photo":
-                    await context.bot.send_photo(
-                        chat_id=user.tg_id,
-                        photo=file,
-                        caption=text.format(
-                            name=user.fullname or "Уважаемый пользователь",
-                            username=user.username or "",
-                        ),
-                        parse_mode=ParseMode.HTML,
-                    )
-                elif post["type"] == "video":
-                    context.bot.send_video(
-                        chat_id=user.tg_id,
-                        video=file,
-                        caption=update.message.caption.format(
-                            name=user.fullname or "Уважаемый пользователь",
-                            username=user.username or "",
-                        ),
-                        parse_mode=ParseMode.HTML,
-                    )
-                else:
-                    await context.bot.send_message(
-                        user.tg_id,
-                        text=text.format(
-                            name=user.fullname or "Уважаемый пользователь",
-                            username=user.username or "",
-                        ),
-                        parse_mode=ParseMode.HTML,
-                    )
-                sended_users_number += 1
-            else:
-                block_bot_users_number += 1
-        except Forbidden:
-            db.update_user(user.tg_id, {"is_blocked": True})
-            block_bot_users_number += 1
-
-    await update.message.reply_text(
-        f"Рассылка была отправлена {sended_users_number} пользователям!\n"
-        f"Пользователей, заблокировавших  бота: {block_bot_users_number}.",
-        reply_markup=ReplyKeyboardMarkup(
-            keyboard=constants.ADMIN_MENU_BTNS, one_time_keyboard=True
-        ),
-    )
-
-
 async def start_send_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         text="Отправьте текст рекламы\n"
@@ -232,12 +176,116 @@ async def send_ad_attachment(
         "attachment": ad_attachment,
         "type": ad_attachment_type,
     }
-    await send_ad(update, context, post)
-    return ConversationHandler.END
+    context.user_data["post"] = post
+    reply_keyboard = [["Да", "Нет"]]
+
+    await update.message.reply_text(
+        "Добавить кнопку к посту?",
+        reply_markup=ReplyKeyboardMarkup(
+            reply_keyboard, one_time_keyboard=True
+        ),
+    )
+    return constants.SEND_AD_BUTTON
 
 
-def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    update.message.reply_text("Создание рекламного поста завершено")
+async def send_ad_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message.text == "Да":
+        await update.message.reply_text(
+            "Отправьте текст кнопки",
+            reply_markup=ReplyKeyboardRemove(),
+        )
+        return constants.SEND_AD_BUTTON
+    elif update.message.text == "Нет":
+        await send_ad(update, context, context.user_data["post"])
+        return ConversationHandler.END
+    elif context.user_data["post"].get("button", None):
+        context.user_data["post"]["button"] = {
+            "text": context.user_data["post"]["button"]["text"],
+            "url": update.message.text.strip(),
+        }
+        await send_ad(update, context, context.user_data["post"])
+        return ConversationHandler.END
+    else:
+        context.user_data["post"]["button"] = {
+            "text": update.message.text.strip()
+        }
+        await update.message.reply_text(
+            "Введите ссылку",
+        )
+        return constants.SEND_AD_BUTTON
+
+
+async def send_ad(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, post: dict
+):
+    users = db.get_all_users(inlcude_admin=False)
+    sended_users_number = 0
+    block_bot_users_number = 0
+    text = post["text"]
+    file = post["attachment"]
+    button = (
+        InlineKeyboardButton(
+            text=post["button"]["text"],
+            url=post["button"]["url"],
+        )
+        if post.get("button", None)
+        else None
+    )
+    kb = InlineKeyboardMarkup([[button]]) if button else None
+
+    for user in users:
+        try:
+            if not user.is_blocked:
+                if post["type"] == "photo":
+                    await context.bot.send_photo(
+                        chat_id=user.tg_id,
+                        photo=file,
+                        caption=text.format(
+                            name=user.fullname or "Уважаемый пользователь",
+                            username=user.username or "",
+                        ),
+                        parse_mode=ParseMode.HTML,
+                        reply_markup=kb,
+                    )
+                elif post["type"] == "video":
+                    context.bot.send_video(
+                        chat_id=user.tg_id,
+                        video=file,
+                        caption=update.message.caption.format(
+                            name=user.fullname or "Уважаемый пользователь",
+                            username=user.username or "",
+                        ),
+                        parse_mode=ParseMode.HTML,
+                        reply_markup=kb,
+                    )
+                else:
+                    await context.bot.send_message(
+                        user.tg_id,
+                        text=text.format(
+                            name=user.fullname or "Уважаемый пользователь",
+                            username=user.username or "",
+                        ),
+                        parse_mode=ParseMode.HTML,
+                        reply_markup=kb,
+                    )
+                sended_users_number += 1
+            else:
+                block_bot_users_number += 1
+        except Forbidden:
+            db.update_user(user.tg_id, {"is_blocked": True})
+            block_bot_users_number += 1
+
+    await update.message.reply_text(
+        f"Рассылка была отправлена {sended_users_number} пользователям!\n"
+        f"Пользователей, заблокировавших  бота: {block_bot_users_number}.",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=constants.ADMIN_MENU_BTNS, one_time_keyboard=True
+        ),
+    )
+
+
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Создание рекламного поста завершено")
     return ConversationHandler.END
 
 
