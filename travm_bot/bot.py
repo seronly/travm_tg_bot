@@ -26,6 +26,8 @@ logger = cl.logger
 def admin_command(func):
     async def wrapper(*args, **kwargs):
         update, context = args
+        if update.channel_post:
+            return
         if db.is_admin(update.effective_user.id):
             return await func(*args, **kwargs)
         else:
@@ -41,7 +43,8 @@ def user_command(func):
         # uncommend if db broke again
         # if not user or not user.fullname:
         #     user = create_or_update_user(update)
-
+        if update.channel_post:
+            return
         if not db.is_admin(update.effective_user.id):
             return await func(*args, **kwargs)
 
