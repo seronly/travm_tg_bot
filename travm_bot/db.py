@@ -19,13 +19,14 @@ def create_or_update_user(update) -> None:
     session = Session()
 
     user = get_user(update.effective_user.id)
-    is_admin = str(user.id) in os.getenv("ADMIN_IDS").split(", ")
+    tg_user = update.effective_user
+    is_admin = str(user.tg_id) in os.getenv("ADMIN_IDS").split(", ")
 
     if not user:
         user_db = User(
-            tg_id=user.id,
-            fullname=user.full_name,
-            username=user.username,
+            tg_id=tg_user.id,
+            fullname=tg_user.full_name,
+            username=tg_user.username,
             first_start=datetime.datetime.now(),
             is_admin=is_admin,
             is_blocked=False,
@@ -34,10 +35,10 @@ def create_or_update_user(update) -> None:
         session.add(user_db)
     else:
         update_user(
-            user.id,
+            user.tg_id,
             {
-                "fullname": user.full_name,
-                "username": user.username,
+                "fullname": tg_user.full_name,
+                "username": tg_user.username,
                 "is_admin": is_admin,
                 "is_blocked": False,
             },
@@ -70,7 +71,7 @@ def update_user(user_id: int, values: dict) -> None:
     session.commit()
 
 
-def get_user_list(inlcude_admin: bool = True) -> list[User]:
+def get_all_users(inlcude_admin: bool = True) -> list[User]:
     session = Session()
     if inlcude_admin:
         return session.query(User).all()
@@ -78,7 +79,7 @@ def get_user_list(inlcude_admin: bool = True) -> list[User]:
         return session.query(User).filter_by(is_admin=False).all()
 
 
-def get_user_list_wtih_block_status(
+def get_all_users_wtih_block_status(
     blocked: bool, inlcude_admin: bool = True
 ) -> list[User]:
     session = Session()
@@ -93,25 +94,6 @@ def get_user_list_wtih_block_status(
     return result
 
 
-def set_user_block_status(user_id: int, blocked: bool) -> None:
-    session = Session()
-    session.query(User).filter_by(tg_id=user_id).first().update(
-        {"is_blocked": blocked}
-    )
-    session.commit()
-
-
-def get_all_user_count() -> int:
-    """Get number of all users
-
-    Returns:
-        int: number of users
-    """
-    session = Session()
-
-    return len(session.query(User).all())
-
-
 def get_blocked_user_count() -> int:
     """Get number of users who block bot
 
@@ -119,6 +101,7 @@ def get_blocked_user_count() -> int:
         int: number of users
     """
     session = Session()
+    print(session.query(User).filter(User.is_blocked).scalar())
     result = session.query(User).filter(User.is_blocked).all()
     return len(result)
 
@@ -131,6 +114,7 @@ def is_admin(user_id: int) -> bool:
 def save_question(question: Question) -> Question:
     session = Session()
     question = session.add(question)
+    logging.info(f"New {question}")
     session.commit()
     return question
 

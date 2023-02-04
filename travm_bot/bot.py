@@ -11,18 +11,7 @@ from telegram.constants import ParseMode
 from telegram.error import Forbidden
 
 import constants
-from db import (
-    create_or_update_user,
-    get_user_list,
-    is_admin,
-    set_user_block_status,
-    get_all_user_count,
-    get_blocked_user_count,
-    get_question,
-    delete_question,
-    save_question,
-    get_question_count,
-)
+import db
 import json
 import logging
 from models import Question
@@ -33,7 +22,7 @@ import os
 def admin_command(func):
     async def wrapper(*args, **kwargs):
         update, context = args
-        if is_admin(update.effective_user.id):
+        if db.is_admin(update.effective_user.id):
             return await func(*args, **kwargs)
         else:
             return await update.message.reply_text("Отказано в доступе!")
@@ -49,7 +38,7 @@ def user_command(func):
         # if not user or not user.fullname:
         #     user = create_or_update_user(update)
 
-        if not is_admin(update.effective_user.id):
+        if not db.is_admin(update.effective_user.id):
             return await func(*args, **kwargs)
 
     return wrapper
@@ -59,7 +48,7 @@ def user_command(func):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.chat_data["current_question_index"] = 0
     text = constants.START_TEXT
-    create_or_update_user(update)
+    db.create_or_update_user(update)
     await update.message.reply_text(text)
 
 
@@ -72,8 +61,7 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @user_command
 async def send_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     question = Question(update.effective_user.id, None, update.message.text)
-    save_question(question)
-    logging.info(f"New {question}")
+    db.save_question(question)
     await context.bot.send_message(
         os.getenv("REPLY_USER_ID"),
         text=question.text + f"\n\nUser id: {question.owner_id}",
@@ -89,9 +77,8 @@ async def send_img(update: Update, context: ContextTypes.DEFAULT_TYPE):
     question = Question(
         update.effective_user.id, photo.file_path, update.message.caption
     )
-    save_question(question)
+    db.save_question(question)
 
-    logging.info(f"New {question}")
     await context.bot.send_photo(
         chat_id=os.getenv("REPLY_USER_ID"),
         photo=file,
@@ -109,8 +96,7 @@ async def send_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     question = Question(
         update.effective_user.id, video.file_path, update.message.caption
     )
-    save_question(question)
-    logging.info(f"New {question}")
+    db.save_question(question)
     await context.bot.send_video(
         chat_id=os.getenv("REPLY_USER_ID"),
         video=file,
@@ -155,7 +141,7 @@ async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @admin_command
 async def send_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    users = get_user_list(inlcude_admin=False)
+    users = db.get_all_users(inlcude_admin=False)
     text = " ".join(update.message.text.split(" ")[1:])
     sended_users_number = 0
     block_bot_users_number = 0
@@ -174,7 +160,7 @@ async def send_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 block_bot_users_number += 1
         except Forbidden:
-            set_user_block_status(user.tg_id, True)
+            db.update_user(user.tg_id, {"is_blocked": True})
             block_bot_users_number += 1
 
     await update.message.reply_text(
@@ -185,9 +171,9 @@ async def send_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @admin_command
 async def get_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_count = get_all_user_count()
-    user_blocked = get_blocked_user_count()
-    question_no_solved = get_question_count()
+    user_count = len(db.get_all_users(inlcude_admin=True))
+    user_blocked = db.get_blocked_user_count()
+    question_no_solved = db.get_question_count()
 
     text = (
         "Статистика:\n\n"
@@ -202,8 +188,8 @@ async def get_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     data = json.loads(query.data)
-    if is_admin(update.effective_user.id):
-        question = get_question(data["question"])
+    if db.is_admin(update.effective_user.id):
+        question = db.get_question(data["question"])
         if question:
             if data["action"] == "accept":
                 await query.answer(constants.SUCCESS_QUESTION_TEXT)
@@ -216,9 +202,9 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 update.callback_query.message.chat_id,
                 update.callback_query.message.message_id,
             )
-            delete_question(question)
+            db.delete_question(question)
         else:
-            logging.error(f"question with id {data['question']} not found")
+            logging.error(f"Question with id {data['question']} not found")
             await query.answer(f"Вопрос с id {data['question']} не найден")
 
     else:
