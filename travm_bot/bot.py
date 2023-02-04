@@ -39,6 +39,10 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def send_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     question = Question(update.effective_user.id, None, update.message.text)
+    if len(question.text) > 250:
+        await update.message.reply_text(constants.LONG_TEXT)
+        return
+
     db.save_question(question)
     await context.bot.send_message(
         os.getenv("REPLY_USER_ID"),
@@ -54,6 +58,9 @@ async def send_img(update: Update, context: ContextTypes.DEFAULT_TYPE):
     question = Question(
         update.effective_user.id, photo.file_path, update.message.caption
     )
+    if len(question.text) > 250:
+        await update.message.reply_text(constants.LONG_TEXT)
+        return
     db.save_question(question)
 
     await context.bot.send_photo(
@@ -72,6 +79,9 @@ async def send_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     question = Question(
         update.effective_user.id, video.file_path, update.message.caption
     )
+    if len(question.text) > 250:
+        await update.message.reply_text(constants.LONG_TEXT)
+        return
     db.save_question(question)
     await context.bot.send_video(
         chat_id=os.getenv("REPLY_USER_ID"),
