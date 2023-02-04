@@ -233,8 +233,9 @@ async def send_ad(
     )
     kb = InlineKeyboardMarkup([[button]]) if button else None
 
-    for user in users:
-        try:
+    try:
+        for user in users:
+            print(user)
             if not user.is_blocked:
                 if post["type"] == "photo":
                     await context.bot.send_photo(
@@ -271,17 +272,50 @@ async def send_ad(
                 sended_users_number += 1
             else:
                 block_bot_users_number += 1
-        except Forbidden:
-            db.update_user(user.tg_id, {"is_blocked": True})
-            block_bot_users_number += 1
-
-    await update.message.reply_text(
-        f"Рассылка была отправлена {sended_users_number} пользователям!\n"
-        f"Пользователей, заблокировавших  бота: {block_bot_users_number}.",
-        reply_markup=ReplyKeyboardMarkup(
-            keyboard=constants.ADMIN_MENU_BTNS, one_time_keyboard=True
-        ),
-    )
+    except Forbidden:
+        db.update_user(user.tg_id, {"is_blocked": True})
+        block_bot_users_number += 1
+    finally:
+        await update.message.reply_text(
+            f"Рассылка была отправлена {sended_users_number} пользователям!\n"
+            f"Пользователей, заблокировавших  бота: {block_bot_users_number}.\n\n"
+            f"Пост:",
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard=constants.ADMIN_MENU_BTNS, one_time_keyboard=True
+            ),
+        )
+        if post["type"] == "photo":
+            await context.bot.send_photo(
+                chat_id=update.effective_user.id,
+                photo=file,
+                caption=text.format(
+                    name=user.fullname or "Уважаемый пользователь",
+                    username=user.username or "",
+                ),
+                parse_mode=ParseMode.HTML,
+                reply_markup=kb,
+            )
+        elif post["type"] == "video":
+            context.bot.send_video(
+                chat_id=update.effective_user.id,
+                video=file,
+                caption=update.message.caption.format(
+                    name=user.fullname or "Уважаемый пользователь",
+                    username=user.username or "",
+                ),
+                parse_mode=ParseMode.HTML,
+                reply_markup=kb,
+            )
+        else:
+            await context.bot.send_message(
+                chat_id=update.effective_user.id,
+                text=text.format(
+                    name=user.fullname or "Уважаемый пользователь",
+                    username=user.username or "",
+                ),
+                parse_mode=ParseMode.HTML,
+                reply_markup=kb,
+            )
 
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
