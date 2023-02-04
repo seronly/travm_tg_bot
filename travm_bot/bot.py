@@ -236,36 +236,31 @@ async def send_ad(
     try:
         for user in users:
             print(user)
+            text = text.format(
+                name=user.fullname or "Уважаемый пользователь",
+                username=user.username or "",
+            )
             if not user.is_blocked:
                 if post["type"] == "photo":
                     await context.bot.send_photo(
                         chat_id=user.tg_id,
                         photo=file,
-                        caption=text.format(
-                            name=user.fullname or "Уважаемый пользователь",
-                            username=user.username or "",
-                        ),
+                        caption=text,
                         parse_mode=ParseMode.HTML,
                         reply_markup=kb,
                     )
                 elif post["type"] == "video":
-                    context.bot.send_video(
+                    await context.bot.send_video(
                         chat_id=user.tg_id,
                         video=file,
-                        caption=update.message.caption.format(
-                            name=user.fullname or "Уважаемый пользователь",
-                            username=user.username or "",
-                        ),
+                        caption=text,
                         parse_mode=ParseMode.HTML,
                         reply_markup=kb,
                     )
                 else:
                     await context.bot.send_message(
                         user.tg_id,
-                        text=text.format(
-                            name=user.fullname or "Уважаемый пользователь",
-                            username=user.username or "",
-                        ),
+                        text=text,
                         parse_mode=ParseMode.HTML,
                         reply_markup=kb,
                     )
@@ -278,8 +273,8 @@ async def send_ad(
     finally:
         await update.message.reply_text(
             f"Рассылка была отправлена {sended_users_number} пользователям!\n"
-            f"Пользователей, заблокировавших  бота: {block_bot_users_number}.\n\n"
-            f"Пост:",
+            f"Пользователей, заблокировавших  бота: {block_bot_users_number}."
+            f"\n\nПост:",
             reply_markup=ReplyKeyboardMarkup(
                 keyboard=constants.ADMIN_MENU_BTNS, one_time_keyboard=True
             ),
@@ -296,10 +291,10 @@ async def send_ad(
                 reply_markup=kb,
             )
         elif post["type"] == "video":
-            context.bot.send_video(
+            await context.bot.send_video(
                 chat_id=update.effective_user.id,
                 video=file,
-                caption=update.message.caption.format(
+                caption=text.format(
                     name=user.fullname or "Уважаемый пользователь",
                     username=user.username or "",
                 ),
