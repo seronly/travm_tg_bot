@@ -103,13 +103,12 @@ def get_blocked_user_count() -> int:
         int: number of users
     """
     session = Session()
-    print(session.query(User).filter(User.is_blocked).scalar())
     result = session.query(User).filter(User.is_blocked).all()
     return len(result)
 
 
-def is_admin(user_id: int) -> bool:
-    return get_user(user_id).is_admin
+def is_admin(user) -> bool:
+    return get_user(user.id).is_admin
 
 
 # Question
