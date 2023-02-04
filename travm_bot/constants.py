@@ -11,6 +11,8 @@ USER_ACCEPTED_QUESTION = "Ваш пост был опубликован!"
 GET_QUESTIONS_TEXT = "Посмотреть вопросы"
 TYPE_IMG_TEXT = "Картинка"
 TYPE_TXT_TEXT = "Текст"
-
+SEND_AD_BTN = "Отправить рассылку"
+CHECK_STATS_BTN = "Посмотреть статистику"
+ADMIN_MENU_BTNS = [[SEND_AD_BTN, CHECK_STATS_BTN]]
 # ConversationHandler
-GET_AD = 0
+SEND_AD_TEXT, SEND_AD_ATTACHMENT = range(2)

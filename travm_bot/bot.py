@@ -1,4 +1,5 @@
 from telegram import (
+    ReplyKeyboardMarkup,
     ReplyKeyboardRemove,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -6,6 +7,7 @@ from telegram import (
 )
 from telegram.ext import (
     ContextTypes,
+    ConversationHandler,
 )
 from telegram.constants import ParseMode
 from telegram.error import Forbidden
@@ -22,38 +24,8 @@ import traceback
 logger = cl.logger
 
 
-# Decorators
-def admin_command(func):
-    async def wrapper(*args, **kwargs):
-        update, context = args
-        if update.channel_post:
-            return
-        if db.is_admin(update.effective_user.id):
-            return await func(*args, **kwargs)
-        else:
-            return await update.message.reply_text("Отказано в доступе!")
-
-    return wrapper
-
-
-def user_command(func):
-    async def wrapper(*args, **kwargs):
-        update, context = args
-        # user = get_user(update.effective_user.id)
-        # uncommend if db broke again
-        # if not user or not user.fullname:
-        #     user = create_or_update_user(update)
-        if update.channel_post:
-            return
-        if not db.is_admin(update.effective_user.id):
-            return await func(*args, **kwargs)
-
-    return wrapper
-
-
 # Commands
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.chat_data["current_question_index"] = 0
     text = constants.START_TEXT
     db.create_or_update_user(update)
     await update.message.reply_text(text)
@@ -65,7 +37,6 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text, reply_markup=ReplyKeyboardRemove())
 
 
-@user_command
 async def send_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     question = Question(update.effective_user.id, None, update.message.text)
     db.save_question(question)
@@ -77,7 +48,6 @@ async def send_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(constants.THANKS_FOR_QUESTION)
 
 
-@user_command
 async def send_img(update: Update, context: ContextTypes.DEFAULT_TYPE):
     file = update.message.photo[-1]
     photo = await file.get_file()
@@ -96,7 +66,6 @@ async def send_img(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(constants.THANKS_FOR_QUESTION)
 
 
-@user_command
 async def send_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     file = update.message.video
     video = await file.get_file()
@@ -133,36 +102,57 @@ def get_question_accept_btns(question: Question):
     ]
 
 
-@admin_command
 async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        text="/send_ad <i>текст сообщения</i> - отправить рассылку\n"
-        "Вы так же можете вставить placeholders:\n"
-        "{name} - полное имя человека в тг\n"
-        "{username} - логин человека в тг\n\n"
+        text="/send_ad - Отправить рассылку\n"
         "/stats - получить статистику бота\n",
         parse_mode="HTML",
-        reply_markup=ReplyKeyboardRemove(),
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=constants.ADMIN_MENU_BTNS, one_time_keyboard=True
+        ),
     )
 
 
-@admin_command
-async def send_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def send_ad(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, post: dict
+):
     users = db.get_all_users(inlcude_admin=False)
-    text = " ".join(update.message.text.split(" ")[1:])
     sended_users_number = 0
     block_bot_users_number = 0
+    text = post["text"]
+    file = post["attachment"]
     for user in users:
         try:
             if not user.is_blocked:
-                await context.bot.send_message(
-                    user.tg_id,
-                    text=text.format(
-                        name=user.fullname or "Уважаемый пользователь",
-                        username=user.username or "",
-                    ),
-                    parse_mode=ParseMode.HTML,
-                )
+                if post["type"] == "photo":
+                    await context.bot.send_photo(
+                        chat_id=user.tg_id,
+                        photo=file,
+                        caption=text.format(
+                            name=user.fullname or "Уважаемый пользователь",
+                            username=user.username or "",
+                        ),
+                        parse_mode=ParseMode.HTML,
+                    )
+                elif post["type"] == "video":
+                    context.bot.send_video(
+                        chat_id=user.tg_id,
+                        video=file,
+                        caption=update.message.caption.format(
+                            name=user.fullname or "Уважаемый пользователь",
+                            username=user.username or "",
+                        ),
+                        parse_mode=ParseMode.HTML,
+                    )
+                else:
+                    await context.bot.send_message(
+                        user.tg_id,
+                        text=text.format(
+                            name=user.fullname or "Уважаемый пользователь",
+                            username=user.username or "",
+                        ),
+                        parse_mode=ParseMode.HTML,
+                    )
                 sended_users_number += 1
             else:
                 block_bot_users_number += 1
@@ -172,11 +162,75 @@ async def send_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         f"Рассылка была отправлена {sended_users_number} пользователям!\n"
-        f"Пользователей, заблокировавших  бота: {block_bot_users_number}."
+        f"Пользователей, заблокировавших  бота: {block_bot_users_number}.",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=constants.ADMIN_MENU_BTNS, one_time_keyboard=True
+        ),
     )
 
 
-@admin_command
+async def start_send_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        text="Отправьте текст рекламы\n"
+        "Вы так же можете вставить placeholders:\n"
+        "{name} - полное имя человека в тг\n"
+        "{username} - логин человека в тг\n\n",
+        parse_mode="HTML",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    return constants.SEND_AD_TEXT
+
+
+async def send_ad_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data["text"] = update.message.text
+    reply_keyboard = [["Да", "Нет"]]
+    await update.message.reply_text(
+        "Нужно ли добавить фото или видео?",
+        reply_markup=ReplyKeyboardMarkup(
+            reply_keyboard, one_time_keyboard=True
+        ),
+    )
+    return constants.SEND_AD_ATTACHMENT
+
+
+async def send_ad_attachment(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+):
+    if update.message.text == "Да":
+        await update.message.reply_text(
+            "Отправьте фото или видео.", reply_markup=ReplyKeyboardRemove()
+        )
+        return constants.SEND_AD_ATTACHMENT
+    elif update.message.text == "Нет":
+        ad_attachment_type = "text"
+        ad_attachment = None
+    elif update.message.photo:
+        ad_attachment = update.message.photo[-1]
+        ad_attachment_type = "photo"
+    elif update.message.video:
+        ad_attachment = update.message.video
+        ad_attachment_type = "video"
+    else:
+        await update.message.reply_text(
+            "Не потдерживаемый тип файла, "
+            "отправьте другой или введите /cancel",
+            reply_markup=ReplyKeyboardRemove(),
+        )
+        return constants.SEND_AD_ATTACHMENT
+    post = {
+        "text": context.user_data["text"],
+        "attachment": ad_attachment,
+        "type": ad_attachment_type,
+    }
+    await send_ad(update, context, post)
+    return ConversationHandler.END
+
+
+def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    update.message.reply_text("Создание рекламного поста завершено")
+    return ConversationHandler.END
+
+
 async def get_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_count = len(db.get_all_users(inlcude_admin=True))
     user_blocked = db.get_blocked_user_count()
@@ -241,7 +295,7 @@ async def error_handler(
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     data = json.loads(query.data)
-    if db.is_admin(update.effective_user.id):
+    if db.is_admin(update.effective_user):
         question = db.get_question(data["question"])
         if question:
             if data["action"] == "accept":
