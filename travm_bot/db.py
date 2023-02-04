@@ -18,8 +18,9 @@ def create_or_update_user(update) -> None:
     """
     session = Session()
 
-    user = get_user(update.effective_user.id)
     tg_user = update.effective_user
+
+    user = get_user(tg_user.id)
     is_admin = str(tg_user.id) in os.getenv("ADMIN_IDS").split(", ")
 
     if not user:
