@@ -15,6 +15,7 @@ TYPE_IMG_TEXT = "Картинка"
 TYPE_TXT_TEXT = "Текст"
 SEND_AD_BTN = "Отправить рассылку"
 CHECK_STATS_BTN = "Посмотреть статистику"
-ADMIN_MENU_BTNS = [[SEND_AD_BTN, CHECK_STATS_BTN]]
+SKIP_BUTTON = "Пропустить"
+ADMIN_MENU_BTNS = [[SEND_AD_BTN], [CHECK_STATS_BTN]]
 # ConversationHandler
 SEND_AD_TEXT, SEND_AD_ATTACHMENT, SEND_AD_BUTTON = range(3)

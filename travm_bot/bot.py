@@ -118,30 +118,39 @@ async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/stats - получить статистику бота\n",
         parse_mode="HTML",
         reply_markup=ReplyKeyboardMarkup(
-            keyboard=constants.ADMIN_MENU_BTNS, one_time_keyboard=True
+            keyboard=constants.ADMIN_MENU_BTNS,
+            resize_keyboard=True,
         ),
     )
 
 
 async def start_send_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    reply_keyboard = [["Да"], ["Нет"]]
     await update.message.reply_text(
-        text="Отправьте текст рекламы\n"
-        "Вы так же можете вставить placeholders:\n"
-        "{name} - полное имя человека в тг\n"
-        "{username} - логин человека в тг\n\n",
+        text="Нужно ли добавить текст рассылки?\n",
         parse_mode="HTML",
-        reply_markup=ReplyKeyboardRemove(),
+        reply_markup=ReplyKeyboardMarkup(
+            reply_keyboard, one_time_keyboard=True, resize_keyboard=True
+        ),
     )
     return constants.SEND_AD_TEXT
 
 
 async def send_ad_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["text"] = update.message.text
-    reply_keyboard = [["Да", "Нет"]]
+    reply_keyboard = [["Да"], ["Нет"]]
+    if update.message.text == "Да":
+        await update.message.reply_text(
+            "Отправьте текст", reply_markup=ReplyKeyboardRemove()
+        )
+        return constants.SEND_AD_TEXT
+    elif update.message.text == "Нет":
+        context.user_data["text"] = ""
+    else:
+        context.user_data["text"] = update.message.text
     await update.message.reply_text(
         "Нужно ли добавить фото или видео?",
         reply_markup=ReplyKeyboardMarkup(
-            reply_keyboard, one_time_keyboard=True
+            reply_keyboard, one_time_keyboard=True, resize_keyboard=True
         ),
     )
     return constants.SEND_AD_ATTACHMENT
@@ -177,12 +186,12 @@ async def send_ad_attachment(
         "type": ad_attachment_type,
     }
     context.user_data["post"] = post
-    reply_keyboard = [["Да", "Нет"]]
+    reply_keyboard = [["Да"], ["Нет"]]
 
     await update.message.reply_text(
         "Добавить кнопку к посту?",
         reply_markup=ReplyKeyboardMarkup(
-            reply_keyboard, one_time_keyboard=True
+            reply_keyboard, one_time_keyboard=True, resize_keyboard=True
         ),
     )
     return constants.SEND_AD_BUTTON
@@ -218,6 +227,15 @@ async def send_ad_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def send_ad(
     update: Update, context: ContextTypes.DEFAULT_TYPE, post: dict
 ):
+    if not post.get("text") and not post.get("attachment"):
+        await update.message.reply_text(
+            "Нет сообщения и/или изображения.\nРассылка не была отправлена.",
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard=constants.ADMIN_MENU_BTNS,
+                resize_keyboard=True,
+            ),
+        )
+        return ConversationHandler.END
     users = db.get_all_users(inlcude_admin=False)
     sended_users_number = 0
     block_bot_users_number = 0
@@ -235,7 +253,6 @@ async def send_ad(
 
     try:
         for user in users:
-            print(user)
             text = text.format(
                 name=user.fullname or "Уважаемый пользователь",
                 username=user.username or "",
@@ -276,7 +293,8 @@ async def send_ad(
             f"Пользователей, заблокировавших  бота: {block_bot_users_number}."
             f"\n\nПост:",
             reply_markup=ReplyKeyboardMarkup(
-                keyboard=constants.ADMIN_MENU_BTNS, one_time_keyboard=True
+                keyboard=constants.ADMIN_MENU_BTNS,
+                resize_keyboard=True,
             ),
         )
         if post["type"] == "photo":
