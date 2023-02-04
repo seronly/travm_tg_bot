@@ -20,7 +20,7 @@ def create_or_update_user(update) -> None:
 
     user = get_user(update.effective_user.id)
     tg_user = update.effective_user
-    is_admin = str(user.tg_id) in os.getenv("ADMIN_IDS").split(", ")
+    is_admin = str(tg_user.id) in os.getenv("ADMIN_IDS").split(", ")
 
     if not user:
         user_db = User(
