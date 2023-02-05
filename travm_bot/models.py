@@ -29,8 +29,8 @@ class User(Base):
     __tablename__ = "users"
 
     tg_id = Column(BigInteger, unique=True, primary_key=True)
-    fullname = Column(String(50))
-    username = Column(String(30))
+    fullname = Column(String(130))
+    username = Column(String(35))
     first_start = Column(DateTime(True))
     is_admin = Column(Boolean(False))
     is_blocked = Column(Boolean(False))
