@@ -38,10 +38,16 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def send_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.edited_message:
+        return
     user = db.get_user(update.effective_user.id)
     if not user:
         db.create_or_update_user(update)
-    question = Question(update.effective_user.id, None, update.message.text)
+    question = Question(
+        update.effective_user.id,
+        None,
+        update.message.text,
+    )
     if len(question.text) > 250:
         await update.message.reply_text(constants.LONG_TEXT)
         return
