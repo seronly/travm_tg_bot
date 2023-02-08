@@ -6,9 +6,10 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
-
+from sqlalchemy.exc import PendingRollbackError
 import os
 import dotenv
+from db import Session
 import custom_logging as cl
 import bot
 import constants
@@ -108,4 +109,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except PendingRollbackError:
+        session = Session()
+        session.rollback()
