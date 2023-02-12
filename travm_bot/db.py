@@ -57,8 +57,9 @@ def get_user(user_id: int) -> User | None:
     Returns:
         User | None: Return User or None if the result doesn't contain any row.
     """
-    session = Session()
-    return session.query(User).filter_by(tg_id=user_id).first()
+    session: scoped_session = Session()
+    user = session.query(User).get({"tg_id": user_id})
+    return user
 
 
 def update_user(user_id: int, values: dict) -> None:
@@ -68,7 +69,7 @@ def update_user(user_id: int, values: dict) -> None:
         user_id (int)
         values (dict)
     """
-    session = Session()
+    session: scoped_session = Session()
     session.query(User).filter_by(tg_id=user_id).update(values)
     session.commit()
 
