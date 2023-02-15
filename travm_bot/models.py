@@ -22,6 +22,7 @@ db_pass = os.getenv("DB_PASS")
 engine = create_engine(
     f"mysql+pymysql://{db_user}:" f"{db_pass}@" f"localhost/{db_name}",
     echo=False,
+    pool_recycle=1800,
 )
 
 
