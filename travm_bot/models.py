@@ -1,5 +1,4 @@
 from sqlalchemy import (
-    create_engine,
     Boolean,
     Column,
     DateTime,
@@ -8,23 +7,8 @@ from sqlalchemy import (
     BigInteger,
 )
 from sqlalchemy.orm import declarative_base
-import os
-import dotenv
-
-dotenv.load_dotenv()
 
 Base = declarative_base()
-
-db_name = os.getenv("DB_NAME")
-db_user = os.getenv("DB_USER")
-db_pass = os.getenv("DB_PASS")
-
-engine = create_engine(
-    f"mysql+pymysql://{db_user}:" f"{db_pass}@" f"localhost/{db_name}",
-    echo=False,
-    pool_recycle=1800,
-)
-
 
 class User(Base):
     __tablename__ = "users"

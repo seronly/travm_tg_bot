@@ -1,14 +1,28 @@
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
-from models import Base, engine, User, Question
+from models import Base, User, Question
 import datetime
-import os
 import custom_logging as cl
+
+import os
+import dotenv
+
+dotenv.load_dotenv()
 
 logger = cl.logger
 
+db_name = os.getenv("DB_NAME")
+db_user = os.getenv("DB_USER")
+db_pass = os.getenv("DB_PASS")
+
+engine = create_engine(
+    f"mysql+pymysql://{db_user}:" f"{db_pass}@" f"localhost/{db_name}",
+    echo=False,
+    pool_recycle=1800,
+)
+
 Base.metadata.create_all(engine)
 Session = scoped_session(sessionmaker(engine))
-
 
 # User
 def create_or_update_user(update) -> None:
