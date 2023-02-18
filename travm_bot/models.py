@@ -23,7 +23,6 @@ engine = create_engine(
     f"mysql+pymysql://{db_user}:" f"{db_pass}@" f"localhost/{db_name}",
     echo=False,
     pool_recycle=1800,
-    wait_timeout=2800,
 )
 
 
