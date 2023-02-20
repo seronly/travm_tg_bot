@@ -73,6 +73,7 @@ def get_user(user_id: int) -> User | None:
     """
     session: scoped_session = Session()
     user = session.query(User).get({"tg_id": user_id})
+    session.commit()
     return user
 
 
