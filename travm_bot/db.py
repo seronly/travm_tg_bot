@@ -35,32 +35,35 @@ def create_or_update_user(update) -> None:
     session = Session()
 
     tg_user = update.effective_user
+    try:
+        user = get_user(tg_user.id)
+        is_admin = str(tg_user.id) in os.getenv("ADMIN_IDS").split(", ")
 
-    user = get_user(tg_user.id)
-    is_admin = str(tg_user.id) in os.getenv("ADMIN_IDS").split(", ")
-
-    if not user:
-        user_db = User(
-            tg_id=tg_user.id,
-            fullname=tg_user.full_name,
-            username=tg_user.username,
-            first_start=datetime.datetime.now(),
-            is_admin=is_admin,
-            is_blocked=False,
-        )
-        logger.info(f"Added user {user_db}")
-        session.add(user_db)
-    else:
-        update_user(
-            user.tg_id,
-            {
-                "fullname": tg_user.full_name,
-                "username": tg_user.username,
-                "is_admin": is_admin,
-                "is_blocked": False,
-            },
-        )
-    session.commit()
+        if not user:
+            user_db = User(
+                tg_id=tg_user.id,
+                fullname=tg_user.full_name,
+                username=tg_user.username,
+                first_start=datetime.datetime.now(),
+                is_admin=is_admin,
+                is_blocked=False,
+            )
+            logger.info(f"Added user {user_db}")
+            session.add(user_db)
+        else:
+            update_user(
+                user.tg_id,
+                {
+                    "fullname": tg_user.full_name,
+                    "username": tg_user.username,
+                    "is_admin": is_admin,
+                    "is_blocked": False,
+                },
+            )
+    except:
+        session.rollback()
+    finally:
+        session.commit()
 
 
 def get_user(user_id: int) -> User | None:
@@ -73,8 +76,12 @@ def get_user(user_id: int) -> User | None:
         User | None: Return User or None if the result doesn't contain any row.
     """
     session: scoped_session = Session()
-    user = session.query(User).get({"tg_id": user_id})
-    session.commit()
+    try:
+        user = session.query(User).get({"tg_id": user_id})
+    except:
+        session.rollback()
+    finally:
+        session.commit()
     return user
 
 
@@ -131,9 +138,13 @@ def is_admin(user) -> bool:
 # Question
 def save_question(question: Question) -> None:
     session = Session()
-    session.add(question)
-    logger.info(f"New {question}")
-    session.commit()
+    try:
+        session.add(question)
+        logger.info(f"New {question}")
+        session.commit()
+    except Exception as e:
+        logger.error(f"Error in save question/n{e}")
+        session.rollback()
 
 
 def get_question(question_id) -> Question:

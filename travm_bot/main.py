@@ -105,12 +105,7 @@ def main():
 
     # Err handler
     application.add_error_handler(bot.error_handler)
-    try:
-        application.run_polling()
-    except PendingRollbackError:
-        session = Session()
-        session.rollback()
-        application.run_polling()
+    application.run_polling()
 
 
 if __name__ == "__main__":
