@@ -419,27 +419,38 @@ async def error_handler(
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     data = json.loads(query.data)
-    if db.is_admin(update.effective_user):
-        question = db.get_question(data["question"])
-        if question:
-            if data["action"] == "accept":
-                await query.answer(constants.SUCCESS_QUESTION_TEXT)
-                await context.bot.send_message(
-                    question.owner_id, constants.USER_ACCEPTED_QUESTION
-                )
-            elif data["action"] == "decline":
-                await query.answer(constants.DECLINE_QUESTION_TEXT)
-            await context.bot.delete_message(
-                update.callback_query.message.chat_id,
-                update.callback_query.message.message_id,
-            )
-            db.delete_question(question)
-        else:
-            logger.error(f"Question with id {data['question']} not found")
-            await query.answer(f"Вопрос с id {data['question']} не найден")
-
-    else:
+    
+    if not db.is_admin(update.effective_user):
         logger.error(
             f"Unauthorized access detected!\nId: {update.effective_user.id}"
         )
         await query.answer("Отказано в доступе!")
+        return
+
+    question = db.get_question(data["question"])
+
+    if not question:
+        logger.error(f"Question with id {data['question']} not found")
+        await query.answer(f"Вопрос с id {data['question']} не найден")
+        return
+
+    user = db.get_user(question.owner_id)
+    
+    if data["action"] == "accept":
+        await query.answer(constants.SUCCESS_QUESTION_TEXT)
+        try:
+            await context.bot.send_message(
+                question.owner_id, constants.USER_ACCEPTED_QUESTION
+            )
+            if user.is_blocked:
+                db.update_user(user.tg_id, {"is_blocked": False})
+        except Forbidden:
+            db.update_user(user.tg_id, {"is_blocked": True})
+    elif data["action"] == "decline":
+        await query.answer(constants.DECLINE_QUESTION_TEXT)
+    await context.bot.delete_message(
+        update.callback_query.message.chat_id,
+        update.callback_query.message.message_id,
+    )
+
+    db.delete_question(question)
